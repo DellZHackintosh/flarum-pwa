@@ -42,11 +42,19 @@ trait PWATrait
         $icons = [];
         foreach (Util::$ICON_SIZES as $size) {
             if ($path = $settings->get("askvortsov-pwa.icon_{$size}_path")) {
-                $icons[] = [
-                    'src' => $assetsFilesystem->url($path),
-                    'sizes' => "{$size}x{$size}",
-                    'type' => 'image/png',
-                ];
+                if ($size != 'any') {
+                    $icons[] = [
+                        'src' => $assetsFilesystem->url($path),
+                        'sizes' => "{$size}x{$size}",
+                        'type' => 'image/png',
+                    ];
+                } else {
+                    $icons[] = [
+                        'src' => $assetsFilesystem->url($path),
+                        'sizes' => "any",
+                        'type' => 'image/svg+xml',
+                    ];
+                }
             }
         }
 

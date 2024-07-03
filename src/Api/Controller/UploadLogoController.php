@@ -45,7 +45,8 @@ class UploadLogoController extends UploadImageController
             throw new RouteNotFoundException();
         }
 
-        $this->filenamePrefix = "pwa-icon-{$size}x{$size}";
+        $this->filenamePrefix = $size == 'any' ? "pwa-icon-any" : "pwa-icon-{$size}x{$size}";
+        $this->fileExtension = $size == 'any' ? 'svg' : 'png';
         $this->filePathSettingKey = "askvortsov-pwa.icon_{$size}_path";
 
         return parent::data($request, $document);
@@ -54,7 +55,8 @@ class UploadLogoController extends UploadImageController
     protected function makeImage(UploadedFileInterface $file): Image
     {
         $manager = new ImageManager();
+        $isSVG = $file->getClientMediaType() == 'image/svg+xml';
 
-        return $manager->make($file->getStream())->resize($this->size, $this->size)->encode('png');
+        return $isSVG ? $file : $manager->make($file->getStream())->resize($this->size, $this->size)->encode('png');
     }
 }
