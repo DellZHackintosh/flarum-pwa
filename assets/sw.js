@@ -113,7 +113,7 @@ self.addEventListener("fetch", function (event) {
           if (!res) {
             return (async () => {
               const fetchResponse = await fetch(event.request);
-              imgStore.set(
+              if (fetchResponse.ok) imgStore.set(
                 event.request.url,
                 await fetchResponse.clone().blob()
               );
@@ -142,7 +142,7 @@ self.addEventListener("fetch", function (event) {
           if (!res)
             return (async () => {
               const fetchResponse = await fetch(event.request);
-              await caches.open(keyFilesCache).then((cache) => {
+              if (fetchResponse.ok) await caches.open(keyFilesCache).then((cache) => {
                 cache.put(event.request, fetchResponse.clone());
               });
               return fetchResponse;
