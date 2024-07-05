@@ -27,22 +27,27 @@ class ServiceWorkerController implements RequestHandlerInterface
     use PWATrait;
 
     protected Filesystem $assetDir;
+    protected string $timestamp;
+    protected string $offlineVar;
+    const REV_MANIFEST = 'rev-manifest.json';
+    const LAST_REV = 'last-rev.json';
 
     public function __construct(Factory $filesystemFactory)
     {
         $this->assetDir = $filesystemFactory->disk('flarum-assets');
+        $settings = resolve(SettingsRepositoryInterface::class);
+        if ($this->assetDir->exists(static::REV_MANIFEST) && $this->assetDir->exists(static::LAST_REV) && $this->assetDir->get(static::REV_MANIFEST) == $this->assetDir->get(static::LAST_REV)) {
+            $this->timestamp = '// Generated on ' . $settings->get('askvortsov-pwa.swTime') . PHP_EOL;
+        } else {
+            $this->assetDir->put(static::LAST_REV, $this->assetDir->get(static::REV_MANIFEST));
+            $settings->set('askvortsov-pwa.swTime', date("Y-m-d H:i:s"));
+            $this->timestamp = '// Generated on ' . $settings->get('askvortsov-pwa.swTime') . PHP_EOL;
+        }
     }
 
-    /**
-     * @throws FileNotFoundException
-     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $settings = resolve(SettingsRepositoryInterface::class);
-        $offlinePath = $settings->get('askvortsov-pwa.customOfflinePage', 'offline');
-        $timestamp = '// Generated on ' . date("Y-m-d H:i:s") . PHP_EOL;
-        $offlineVar = 'const offlineFallbackPage = "' . $offlinePath . '";' . PHP_EOL;
-        
-        return new TextResponse($timestamp . $offlineVar . $this->assetDir->get('extensions/askvortsov-pwa/sw.js'), 200, ['content-type' => 'text/javascript; charset=utf-8']);
+        return new TextResponse($this->timestamp . $this->assetDir->get('extensions/askvortsov-pwa/sw.js'), 200, ['content-type' => 'text/javascript; charset=utf-8']);
     }
+
 }
