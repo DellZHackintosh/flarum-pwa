@@ -105,7 +105,7 @@ self.addEventListener("activate", (event) => {
 
 // If any fetch fails, it will show the offline page.
 self.addEventListener("fetch", function (event) {
-  if (image.test(event.request.url)) {
+/*  if (image.test(event.request.url)) {
     event.respondWith(
       imgStore
         .get(event.request.url)
@@ -128,6 +128,7 @@ self.addEventListener("fetch", function (event) {
     );
     return;
   }
+*/
   if (keyFile.test(event.request.url)) {
     event.respondWith(
       caches
