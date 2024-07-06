@@ -60,11 +60,21 @@ const forumPayload = {};
 
 const fallbackResponse = new Response("Network error happened", {
   status: 408,
-  headers: { "Content-Type": "text/plain" },
+  headers: new Headers({ "Content-Type": "text/plain" }),
 });
 
 // Replace the following with the correct offline fallback page i.e.: const offlineFallbackPage = "offline";
-const offlineFallbackPage = "offline";
+// const offlineFallbackPage = "offline";
+
+const fallbackToPage = new Response(
+  `<head><meta http-equiv="Refresh" content="0; URL=${offlineFallbackPage}" /></head>`,
+  {
+    status: 408,
+    headers: new Headers({
+      "Content-Type": "text-html",
+    }),
+  }
+);
 
 // Install stage sets up the offline page in the cache and opens a new cache
 self.addEventListener("install", function (event) {
@@ -91,21 +101,23 @@ self.addEventListener("activate", (event) => {
   console.log("[PWA] Activate event processing...");
   event.waitUntil(
     new Promise((resolve) => {
-      resolve((async () => {
-        const cache = await caches.open(keyFilesCache);
-        const fileList = await cache.keys();
-        return fileList.forEach((file) => {
-          cache.delete(file);
-          console.log("[PWA] Removed", file);
-        });
-      })());
+      resolve(
+        (async () => {
+          const cache = await caches.open(keyFilesCache);
+          const fileList = await cache.keys();
+          return fileList.forEach((file) => {
+            cache.delete(file);
+            console.log("[PWA] Removed", file);
+          });
+        })()
+      );
     }).then(() => clients.claim())
   );
 });
 
 // If any fetch fails, it will show the offline page.
 self.addEventListener("fetch", function (event) {
-/*  if (image.test(event.request.url)) {
+  if (image.test(event.request.url)) {
     event.respondWith(
       imgStore
         .get(event.request.url)
@@ -113,22 +125,35 @@ self.addEventListener("fetch", function (event) {
           if (!res) {
             return (async () => {
               const fetchResponse = await fetch(event.request);
-              if (fetchResponse.ok) imgStore.set(
-                event.request.url,
-                await fetchResponse.clone().blob()
-              );
+              const blob = await fetchResponse.clone().blob();
+              if (fetchResponse.status != 0 && fetchResponse.ok) {
+                let headers = {};
+                fetchResponse.headers.forEach((value, name) => {
+                  headers[name] = value;
+                });
+                imgStore.set(event.request.url, {
+                  blob,
+                  headers,
+                  status: fetchResponse.status,
+                  statusText: fetchResponse.statusText,
+                });
+              }
               return fetchResponse;
             })();
-          } else return new Response(res);
+          } else
+            return new Response(res.blob, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: new Headers(res.headers),
+            });
         })
         .catch((error) => {
           throw error;
-          return fallbackResponse;
+          return fallbackResponse.clone();
         })
     );
     return;
   }
-*/
   if (keyFile.test(event.request.url)) {
     event.respondWith(
       caches
@@ -143,9 +168,10 @@ self.addEventListener("fetch", function (event) {
           if (!res)
             return (async () => {
               const fetchResponse = await fetch(event.request);
-              if (fetchResponse.ok) await caches.open(keyFilesCache).then((cache) => {
-                cache.put(event.request, fetchResponse.clone());
-              });
+              if (fetchResponse.status != 0 && fetchResponse.ok)
+                await caches.open(keyFilesCache).then((cache) => {
+                  cache.put(event.request, fetchResponse.clone());
+                });
               return fetchResponse;
             })();
 
@@ -182,9 +208,21 @@ self.addEventListener("fetch", function (event) {
             throw error;
           }
 
+          /*
           return caches.open(pageCACHE).then(function (cache) {
             return cache.match(offlineFallbackPage);
           });
+          */
+
+          if (
+            offlineFallbackPage === "offline" ||
+            new URL(event.request.url, location.origin).href ===
+              new URL(offlineFallbackPage, location.origin).href
+          )
+            return caches.open(pageCACHE).then(function (cache) {
+              return cache.match(offlineFallbackPage);
+            });
+          return fallbackToPage.clone();
         });
     })()
   );

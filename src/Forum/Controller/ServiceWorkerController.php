@@ -1,14 +1,5 @@
 <?php
 
-/*
- * This file is part of askvortsov/flarum-pwa
- *
- *  Copyright (c) 2021 Alexander Skvortsov.
- *
- *  For detailed copyright and license information, please view the
- *  LICENSE file that was distributed with this source code.
- */
-
 namespace Askvortsov\FlarumPWA\Forum\Controller;
 
 use Askvortsov\FlarumPWA\PWATrait;
@@ -36,6 +27,8 @@ class ServiceWorkerController implements RequestHandlerInterface
     {
         $this->assetDir = $filesystemFactory->disk('flarum-assets');
         $settings = resolve(SettingsRepositoryInterface::class);
+        $offlinePath = $settings->get('askvortsov-pwa.customOfflinePage', '/offline');
+        $this->offlineVar = 'const offlineFallbackPage = "' . $offlinePath . '";' . PHP_EOL;
         if ($this->assetDir->exists(static::REV_MANIFEST) && $this->assetDir->exists(static::LAST_REV) && $this->assetDir->get(static::REV_MANIFEST) == $this->assetDir->get(static::LAST_REV)) {
             $this->timestamp = '// Generated on ' . $settings->get('askvortsov-pwa.swTime') . PHP_EOL;
         } else {
@@ -47,7 +40,6 @@ class ServiceWorkerController implements RequestHandlerInterface
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        return new TextResponse($this->timestamp . $this->assetDir->get('extensions/askvortsov-pwa/sw.js'), 200, ['content-type' => 'text/javascript; charset=utf-8']);
+        return new TextResponse($this->timestamp . $this->offlineVar . $this->assetDir->get('extensions/askvortsov-pwa/sw.js'), 200, ['content-type' => 'text/javascript; charset=utf-8']);
     }
-
 }

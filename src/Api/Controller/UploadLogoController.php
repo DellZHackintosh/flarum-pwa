@@ -23,12 +23,20 @@ use Intervention\Image\ImageManager;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 use Tobscure\JsonApi\Document;
+use Illuminate\Contracts\Filesystem\Factory;
+use Flarum\Settings\SettingsRepositoryInterface;
+
 
 class UploadLogoController extends UploadImageController
 {
     use PWATrait;
 
-    protected int $size;
+    protected mixed $size;
+
+    public function __construct(SettingsRepositoryInterface $settings, Factory $filesystemFactory)
+    {
+        parent::__construct($settings, $filesystemFactory);
+    }
 
     /**
      * {@inheritdoc}
@@ -38,16 +46,20 @@ class UploadLogoController extends UploadImageController
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $size = intval(Arr::get($request->getQueryParams(), 'size'));
+        $size = Arr::get($request->getQueryParams(), 'size');
+        $size = intval($size);
         $this->size = $size;
 
         if (! in_array($size, Util::$ICON_SIZES)) {
             throw new RouteNotFoundException();
         }
 
-        $this->filenamePrefix = $size == 'any' ? "pwa-icon-any" : "pwa-icon-{$size}x{$size}";
-        $this->fileExtension = $size == 'any' ? 'svg' : 'png';
+
+        $this->filenamePrefix = "pwa-icon-{$size}x{$size}";
+        $this->fileExtension = 'png';
         $this->filePathSettingKey = "askvortsov-pwa.icon_{$size}_path";
+
+        $file = Arr::get($request->getUploadedFiles(), $this->filenamePrefix);
 
         return parent::data($request, $document);
     }
@@ -55,8 +67,7 @@ class UploadLogoController extends UploadImageController
     protected function makeImage(UploadedFileInterface $file): Image
     {
         $manager = new ImageManager();
-        $isSVG = $file->getClientMediaType() == 'image/svg+xml';
 
-        return $isSVG ? $file : $manager->make($file->getStream())->resize($this->size, $this->size)->encode('png');
+        return $manager->make($file->getStream())->resize($this->size, $this->size)->encode('png');
     }
 }
