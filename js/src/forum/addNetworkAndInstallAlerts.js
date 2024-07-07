@@ -27,7 +27,7 @@ export default () => {
       app.cache.pwaOfflineAlert = app.alerts.show(app.translator.trans('askvortsov-pwa.forum.alerts.offline'));
     });
 
-    if (app.forum.attribute('installAlerts') && !localStorage.getItem('askvortov-pwa.install-alert.dismissed'))
+    if (app.forum.attribute('installAlerts') === '1' && !localStorage.getItem('askvortov-pwa.install-alert.dismissed'))
       window.addEventListener('beforeinstallprompt', function (e) {
         e.preventDefault();
         const alertId = app.alerts.show(
@@ -51,7 +51,7 @@ export default () => {
       });
 
     if (
-      app.forum.attribute('installAlerts') &&
+      app.forum.attribute('installAlerts') === '1' &&
       !localStorage.getItem('askvortov-pwa.install-alert.dismissed') &&
       navigator.standalone === false &&
       !usingAppleWebview()
